@@ -795,11 +795,11 @@ textarea { resize: none; min-height: 72px; }
 <script>
 /* ─── JUSTIFICATIFS ─── */
 const JUSTIFS = [
-  { id: 'non_retrouve', iconHtml: '&#x1F50D;', label: 'Ballon non retrouvé' },
-  { id: 'inaccessible', iconHtml: '&#x1F6AB;', label: 'Ballon inaccessible (coincé, hors de portée)' },
-  { id: 'creve',        iconHtml: '&#x1F4A5;', label: 'Ballon crévé / hors d\'usage' },
-  { id: 'emporte',      iconHtml: '&#x1F3C3;', label: 'Emporté par un joueur' },
-  { id: 'adversaire',   iconHtml: '&#x1F91D;', label: 'Laissé chez l\'adversaire / terrain extérieur' },
+  { id: 'non_retrouve', iconHtml: '&#x1F50D;', label: "Ballon non retrouvé" },
+  { id: 'inaccessible', iconHtml: '&#x1F6AB;', label: "Ballon inaccessible (coincé, hors de portée)" },
+  { id: 'creve',        iconHtml: '&#x1F4A5;', label: "Ballon crévé / hors d'usage" },
+  { id: 'emporte',      iconHtml: '&#x1F3C3;', label: "Emporté par un joueur" },
+  { id: 'adversaire',   iconHtml: '&#x1F91D;', label: "Laissé chez l'adversaire / terrain extérieur" },
 ];
 
 /* ─── HELPER ESCAPE HTML ─── */
@@ -1127,3 +1127,91 @@ function resetSaison() {
   save();
   renderHistorique();
   renderDerniere();
+    fermerModal();
+  showToast('RESET_MSG');
+}
+function fermerModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); }
+
+/* ─── EXPORT CSV ─── */
+function exporterCSV() {
+  const stockMap = getStockProgMap();
+  const h = ['#','Date','Type','Lieu','Responsable','Sortis','Rentres','Ecart','Stock apres','Remarque'];
+  const rows = seances.map((s,i) => [i+1,s.date,s.type,s.lieu,s.responsable,s.avant,s.apres,s.ecart,stockMap[s.id],s.remarque]);
+  const csv = [h,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'UR_Ballons_Saison.csv'; a.click();
+  showToast('⬇ CSV OK !');
+}
+
+/* ─── EXPORT PDF ─── */
+function exporterPDF() {
+  if (typeof window.jspdf === 'undefined') {
+    showToast('⏳ Chargement PDF...');
+    setTimeout(exporterPDF, 1500); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const saison = document.getElementById('cSaison').value || '2025-2026';
+  const equipe = document.getElementById('cEquipe').value || '';
+  const today  = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const stock  = getStockActuel();
+  const pertes = seances.reduce((a,s) => a + Math.max(0,s.ecart), 0);
+  doc.setFillColor(5, 30, 80);
+  doc.rect(0, 0, 297, 24, 'F');
+  doc.setFillColor(0, 100, 220);
+  doc.rect(0, 22, 297, 2, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('UNION ROCHEFORTOISE - GESTION DES BALLONS', 14, 10);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Saison ' + saison + (equipe ? '  -  ' + equipe : '') + '  -  Edit le ' + today, 14, 17);
+  doc.text('Stock initial : ' + stockInitial + '  |  Stock actuel : ' + stock + '  |  Pertes saison : ' + pertes + '  |  Seances : ' + seances.length, 297-14, 17, {align:'right'});
+  const stockMap = getStockProgMap();
+  const data = seances.map((s,i) => {
+    const ecart = s.ecart > 0 ? '-'+s.ecart : s.ecart < 0 ? '+'+Math.abs(s.ecart) : '=0';
+    const dateF = new Date(s.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    return [i+1, dateF, s.type, s.lieu||'', s.responsable||'', s.avant, s.apres, ecart, stockMap[s.id]||'', s.remarque||''];
+  });
+  doc.autoTable({
+    startY: 28,
+    head: [['#','Date','Type','Lieu / Adversaire','Responsable','Sortis','Rentres','Ecart','Stock','Remarque / Justificatif']],
+    body: data,
+    styles: { fontSize: 8, cellPadding: 2.5, font:'helvetica' },
+    headStyles: { fillColor:[5,50,150], textColor:255, fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[240,245,255] },
+    columnStyles: {
+      0: { halign:'center', cellWidth:8 }, 1: { cellWidth:18 }, 2: { cellWidth:22 },
+      5: { halign:'center', cellWidth:13 }, 6: { halign:'center', cellWidth:13 },
+      7: { halign:'center', cellWidth:13, fontStyle:'bold' }, 8: { halign:'center', cellWidth:13 },
+      9: { fontStyle:'italic', textColor:[80,100,140] },
+    },
+    didParseCell: d => {
+      if (d.column.index === 7 && d.section === 'body') {
+        const v = d.cell.text[0];
+        if (v && v.startsWith('-')) d.cell.styles.textColor = [192,57,43];
+        else if (v && v.startsWith('+')) d.cell.styles.textColor = [0,150,80];
+      }
+    },
+    margin: { left:14, right:14 },
+  });
+  const pages = doc.getNumberOfPages();
+  for (let p=1; p<=pages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(150,160,180);
+    doc.text('Page ' + p + '/' + pages + ' - Union Rochefortoise - Saison ' + saison, 14, 205);
+  }
+  doc.save('UR_Ballons_Saison_' + saison.replace(/[^a-zA-Z0-9]/g,'_') + '.pdf');
+  showToast('📄 PDF OK !');
+}
+
+/* ─── INIT ─── */
+window.addEventListener('DOMContentLoaded', () => {
+  buildChips();
+  load();
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+});
+</script>
+
+</body>
+</html>
