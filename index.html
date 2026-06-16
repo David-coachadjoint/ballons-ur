@@ -476,6 +476,39 @@ textarea { resize: none; min-height: 72px; }
   white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* ══════════════════════════════════════
+   JUSTIFICATIFS
+══════════════════════════════════════ */
+.justifs-section { display: none; margin-bottom: 10px; }
+.justifs-section.show { display: block; }
+.jchips-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.jchip {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 13px; border-radius: 9px;
+  background: rgba(0,20,60,0.5);
+  border: 1.5px solid rgba(0,120,255,0.2);
+  color: var(--texte); font-size: .88rem;
+  cursor: pointer; font-family: inherit;
+  text-align: left; min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .2s, background .2s;
+  width: 100%;
+}
+.jchip.selected {
+  background: rgba(255,51,85,0.14);
+  border-color: var(--rouge);
+  color: white;
+}
+.jchip-ico { font-size: 1.15rem; flex-shrink: 0; line-height: 1; }
+.jbadges-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.jbadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px; font-size: .72rem;
+  background: rgba(255,51,85,0.12);
+  border: 1px solid rgba(255,51,85,0.3);
+  color: #ff8fa3; font-weight: 600;
+}
 </style>
 </head>
 <body>
@@ -619,13 +652,21 @@ textarea { resize: none; min-height: 72px; }
     </div>
 
     <div class="alerte-perte" id="alertePerte">
-      ⚠️ Des ballons manquent — justificatif obligatoire !
+      ⚠️ Des ballons manquent — sélectionnez la cause !
+    </div>
+
+    <!-- JUSTIFICATIFS -->
+    <div class="justifs-section" id="justifSection">
+      <div class="form-card">
+        <label>🔴 Cause(s) de la perte</label>
+        <div class="jchips-grid" id="justifsList"></div>
+      </div>
     </div>
 
     <div class="form-card">
       <div class="form-group">
-        <label>📝 Remarque / Justificatif</label>
-        <textarea id="fRemarque" placeholder="Ex : 2 ballons crevés lors du match, 1 laissé chez l'adversaire, don à l'U13…"></textarea>
+        <label>📝 Remarque complémentaire</label>
+        <textarea id="fRemarque" placeholder="Précisions supplémentaires (optionnel)…"></textarea>
       </div>
     </div>
 
@@ -752,12 +793,59 @@ textarea { resize: none; min-height: 72px; }
      JAVASCRIPT
 ══════════════════════════════════════ -->
 <script>
+/* ─── JUSTIFICATIFS ─── */
+const JUSTIFS = [
+  { id: 'non_retrouve', iconHtml: '&#x1F50D;', label: 'Ballon non retrouvé' },
+  { id: 'inaccessible', iconHtml: '&#x1F6AB;', label: 'Ballon inaccessible (coincé, hors de portée)' },
+  { id: 'creve',        iconHtml: '&#x1F4A5;', label: 'Ballon crévé / hors d\'usage' },
+  { id: 'emporte',      iconHtml: '&#x1F3C3;', label: 'Emporté par un joueur' },
+  { id: 'adversaire',   iconHtml: '&#x1F91D;', label: 'Laissé chez l\'adversaire / terrain extérieur' },
+];
+
+/* ─── HELPER ESCAPE HTML ─── */
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ─── BUILD CHIPS ─── */
+function buildChips() {
+  const container = document.getElementById('justifsList');
+  if (!container) return;
+  container.innerHTML = '';
+  JUSTIFS.forEach(j => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'jchip';
+    btn.dataset.id = j.id;
+    btn.onclick = () => toggleJustif(btn);
+    const ico = document.createElement('span');
+    ico.className = 'jchip-ico';
+    ico.innerHTML = j.iconHtml;
+    const lbl = document.createElement('span');
+    lbl.textContent = j.label;
+    btn.appendChild(ico);
+    btn.appendChild(lbl);
+    container.appendChild(btn);
+  });
+}
+
+function toggleJustif(btn) {
+  btn.classList.toggle('selected');
+}
+
+function getSelectedJustifs() {
+  return Array.from(document.querySelectorAll('#justifsList .jchip.selected'))
+    .map(btn => btn.dataset.id);
+}
+
 /* ─── ÉTAT ─── */
 let seances = [];
 let stockInitial = 0;
 let countAvant = 0, countApres = 0;
 let idASupprimer = null;
-const KEY = 'ur_ballons_v3';
+const KEY = 'ur_ballons_v4';
 
 /* ─── NAVIGATION ─── */
 function goToPage(id) {
@@ -810,20 +898,24 @@ function updateDiff() {
     el.textContent = '— Saisir les ballons ci-dessus';
     alerte.classList.remove('show'); return;
   }
+  const justifSec = document.getElementById('justifSection');
   if (diff > 0) {
     el.className = 'diff-display perte';
     el.textContent = '⚠️  −' + diff + ' ballon' + (diff > 1 ? 's' : '') + ' manquant' + (diff > 1 ? 's' : '');
     alerte.classList.add('show');
+    justifSec.classList.add('show');
     document.getElementById('counterApres').className = 'ball-counter rouge';
   } else if (diff < 0) {
     el.className = 'diff-display ok';
     el.textContent = '✅  +' + Math.abs(diff) + ' ballon' + (Math.abs(diff) > 1 ? 's' : '') + ' en plus';
     alerte.classList.remove('show');
+    justifSec.classList.remove('show');
     document.getElementById('counterApres').className = 'ball-counter vert';
   } else {
     el.className = 'diff-display ok';
     el.textContent = '✅  Aucune perte — 0 écart';
     alerte.classList.remove('show');
+    justifSec.classList.remove('show');
     document.getElementById('counterApres').className = 'ball-counter vert';
   }
 }
@@ -898,6 +990,7 @@ function ajouterSeance(e) {
     lieu: document.getElementById('fLieu').value.trim(),
     responsable: document.getElementById('fResponsable').value.trim(),
     avant: av, apres: ap, ecart, remarque,
+    justifs: ecart > 0 ? getSelectedJustifs() : [],
   };
   seances.push(seance);
   seances.sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -919,7 +1012,26 @@ function resetForm() {
   document.getElementById('diffDisplay').className = 'diff-display neutre';
   document.getElementById('diffDisplay').textContent = '— Saisir les ballons ci-dessus';
   document.getElementById('alertePerte').classList.remove('show');
+  document.getElementById('justifSection').classList.remove('show');
+  document.querySelectorAll('#justifsList .jchip').forEach(c => c.classList.remove('selected'));
   document.getElementById('counterApres').className = 'ball-counter';
+}
+
+/* ─── POPULATE JUSTIF BADGES (DOM-safe, HTML entity icons) ─── */
+function populateJustifBadges(seancesList) {
+  seancesList.forEach(s => {
+    if (!(s.justifs || []).length) return;
+    const row = document.getElementById('jbadges-' + s.id);
+    if (!row) return;
+    s.justifs.forEach(id => {
+      const j = JUSTIFS.find(x => x.id === id);
+      if (!j) return;
+      const badge = document.createElement('span');
+      badge.className = 'jbadge';
+      badge.innerHTML = j.iconHtml + ' ' + esc(j.label);
+      row.appendChild(badge);
+    });
+  });
 }
 
 /* ─── RENDER DERNIÈRE SÉANCE ─── */
@@ -931,6 +1043,7 @@ function renderDerniere() {
   }
   const s = seances[seances.length - 1];
   el.innerHTML = buildSeanceCard(s, getStockProgMap()[s.id]);
+  populateJustifBadges([s]);
 }
 
 /* ─── STOCK PROGRESSIF ─── */
@@ -970,6 +1083,7 @@ function buildSeanceCard(s, stockApres) {
       </div>
       ${s.responsable && s.lieu ? `<div style="font-size:.75rem;color:var(--texte-doux);margin-bottom:4px;">👤 ${s.responsable}</div>` : ''}
       ${stockApres !== undefined ? `<div class="seance-stock">⚽ Stock après séance : <strong style="color:white;margin-left:4px;">${stockApres}</strong></div>` : ''}
+      ${(s.justifs || []).length ? `<div class="jbadges-row" id="jbadges-${s.id}"></div>` : ''}
       ${s.remarque ? `<div class="seance-remarque">💬 ${s.remarque}</div>` : ''}
     </div>`;
 }
@@ -990,6 +1104,7 @@ function renderHistorique() {
     return;
   }
   el.innerHTML = rows.map(s => buildSeanceCard(s, stockMap[s.id])).join('');
+  populateJustifBadges(rows);
 }
 
 /* ─── SUPPRESSION ─── */
@@ -1012,100 +1127,3 @@ function resetSaison() {
   save();
   renderHistorique();
   renderDerniere();
-  fermerModal();
-  showToast('♻️ Saison réinitialisée');
-}
-function fermerModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); }
-
-/* ─── EXPORT CSV ─── */
-function exporterCSV() {
-  const stockMap = getStockProgMap();
-  const h = ['#','Date','Type','Lieu','Responsable','Sortis','Rentrés','Écart','Stock après','Remarque'];
-  const rows = seances.map((s,i) => [i+1,s.date,s.type,s.lieu,s.responsable,s.avant,s.apres,s.ecart,stockMap[s.id],s.remarque]);
-  const csv = [h,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}));
-  a.download = 'UR_Ballons_Saison.csv'; a.click();
-  showToast('⬇ CSV téléchargé !');
-}
-
-/* ─── EXPORT PDF ─── */
-function exporterPDF() {
-  if (typeof window.jspdf === 'undefined') {
-    showToast('⏳ Chargement PDF en cours…');
-    setTimeout(exporterPDF, 1500); return;
-  }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-  const saison = document.getElementById('cSaison').value || '2025–2026';
-  const equipe = document.getElementById('cEquipe').value || '';
-  const today  = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const stock  = getStockActuel();
-  const pertes = seances.reduce((a,s) => a + Math.max(0,s.ecart), 0);
-
-  // Header bleu
-  doc.setFillColor(5, 30, 80);
-  doc.rect(0, 0, 297, 24, 'F');
-  doc.setFillColor(0, 100, 220);
-  doc.rect(0, 22, 297, 2, 'F');
-
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(14); doc.setFont('helvetica','bold');
-  doc.text('UNION ROCHEFORTOISE — GESTION DES BALLONS', 14, 10);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(`Saison ${saison}${equipe ? '  ·  ' + equipe : ''}  ·  Édité le ${today}`, 14, 17);
-  doc.text(`Stock initial : ${stockInitial}  |  Stock actuel : ${stock}  |  Pertes saison : ${pertes}  |  Séances : ${seances.length}`, 297-14, 17, {align:'right'});
-
-  const stockMap = getStockProgMap();
-  const data = seances.map((s,i) => {
-    const ecart = s.ecart > 0 ? `−${s.ecart}` : s.ecart < 0 ? `+${Math.abs(s.ecart)}` : '=0';
-    const dateF = new Date(s.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
-    return [i+1, dateF, s.type, s.lieu||'', s.responsable||'', s.avant, s.apres, ecart, stockMap[s.id]||'', s.remarque||''];
-  });
-
-  doc.autoTable({
-    startY: 28,
-    head: [['#','Date','Type','Lieu / Adversaire','Responsable','Sortis','Rentrés','Écart','Stock','Remarque / Justificatif']],
-    body: data,
-    styles: { fontSize: 8, cellPadding: 2.5, font:'helvetica' },
-    headStyles: { fillColor:[5,50,150], textColor:255, fontStyle:'bold' },
-    alternateRowStyles: { fillColor:[240,245,255] },
-    columnStyles: {
-      0: { halign:'center', cellWidth:8 },
-      1: { cellWidth:18 },
-      2: { cellWidth:22 },
-      5: { halign:'center', cellWidth:13 },
-      6: { halign:'center', cellWidth:13 },
-      7: { halign:'center', cellWidth:13, fontStyle:'bold' },
-      8: { halign:'center', cellWidth:13 },
-      9: { fontStyle:'italic', textColor:[80,100,140] },
-    },
-    didParseCell: d => {
-      if (d.column.index === 7 && d.section === 'body') {
-        const v = d.cell.text[0];
-        if (v && v.startsWith('−')) d.cell.styles.textColor = [192,57,43];
-        else if (v && v.startsWith('+')) d.cell.styles.textColor = [0,150,80];
-      }
-    },
-    margin: { left:14, right:14 },
-  });
-
-  const pages = doc.getNumberOfPages();
-  for (let p=1; p<=pages; p++) {
-    doc.setPage(p);
-    doc.setFontSize(7); doc.setTextColor(150,160,180);
-    doc.text(`Page ${p}/${pages} — Union Rochefortoise · Saison ${saison}`, 14, 205);
-  }
-  doc.save(`UR_Ballons_Saison_${saison.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`);
-  showToast('📄 PDF exporté !');
-}
-
-/* ─── INIT ─── */
-window.addEventListener('DOMContentLoaded', () => {
-  load();
-  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
-});
-</script>
-
-</body>
-</html>
