@@ -247,7 +247,12 @@ textarea { resize: none; min-height: 72px; }
 .ball-counter .count-display {
   flex: 1; text-align: center; font-size: 1.3rem;
   font-weight: 800; color: white;
+  background: none; border: none; outline: none;
+  padding: 0; min-width: 0;
+  -webkit-appearance: none; -moz-appearance: textfield;
 }
+.ball-counter .count-display::-webkit-outer-spin-button,
+.ball-counter .count-display::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .ball-counter.rouge { border-color: rgba(255,51,85,0.4); }
 .ball-counter.vert  { border-color: rgba(0,230,118,0.4); }
 
@@ -631,7 +636,7 @@ textarea { resize: none; min-height: 72px; }
         <label>🔵 Ballons sortis (avant séance)</label>
         <div class="ball-counter" id="counterAvant">
           <button type="button" onclick="changeCount('avant',-1)">−</button>
-          <div class="count-display" id="displayAvant">0</div>
+          <input type="number" class="count-display" id="displayAvant" value="0" min="0" oninput="onManualCount('avant',this)">
           <button type="button" onclick="changeCount('avant',+1)">+</button>
         </div>
         <input type="hidden" id="fAvant" value="0">
@@ -640,7 +645,7 @@ textarea { resize: none; min-height: 72px; }
         <label>🟢 Ballons rentrés (après séance)</label>
         <div class="ball-counter" id="counterApres">
           <button type="button" onclick="changeCount('apres',-1)">−</button>
-          <div class="count-display" id="displayApres">0</div>
+          <input type="number" class="count-display" id="displayApres" value="0" min="0" oninput="onManualCount('apres',this)">
           <button type="button" onclick="changeCount('apres',+1)">+</button>
         </div>
         <input type="hidden" id="fApres" value="0">
@@ -730,7 +735,7 @@ textarea { resize: none; min-height: 72px; }
       <label>⚽ Stock initial de ballons</label>
       <div class="ball-counter">
         <button type="button" onclick="changeStockInit(-1)">−</button>
-        <div class="count-display" id="displayStockInit">0</div>
+        <input type="number" class="count-display" id="displayStockInit" value="0" min="0" oninput="onManualCount('stock',this)">
         <button type="button" onclick="changeStockInit(+1)">+</button>
       </div>
       <input type="hidden" id="cStockInit" value="0">
@@ -872,19 +877,36 @@ function showToast(msg, dur = 2200) {
 function changeCount(champ, delta) {
   if (champ === 'avant') {
     countAvant = Math.max(0, countAvant + delta);
-    document.getElementById('displayAvant').textContent = countAvant;
+    document.getElementById('displayAvant').value = countAvant;
     document.getElementById('fAvant').value = countAvant;
   } else {
     countApres = Math.max(0, countApres + delta);
-    document.getElementById('displayApres').textContent = countApres;
+    document.getElementById('displayApres').value = countApres;
     document.getElementById('fApres').value = countApres;
+  }
+  updateDiff();
+}
+
+function onManualCount(champ, el) {
+  const v = Math.max(0, parseInt(el.value, 10) || 0);
+  el.value = v;
+  if (champ === 'avant') {
+    countAvant = v;
+    document.getElementById('fAvant').value = v;
+  } else if (champ === 'apres') {
+    countApres = v;
+    document.getElementById('fApres').value = v;
+  } else if (champ === 'stock') {
+    stockInitial = v;
+    document.getElementById('cStockInit').value = v;
+    return;
   }
   updateDiff();
 }
 
 function changeStockInit(delta) {
   stockInitial = Math.max(0, stockInitial + delta);
-  document.getElementById('displayStockInit').textContent = stockInitial;
+  document.getElementById('displayStockInit').value = stockInitial;
   document.getElementById('cStockInit').value = stockInitial;
 }
 
@@ -945,7 +967,7 @@ function load() {
   seances = d.seances || [];
   stockInitial = d.stockInitial || 0;
   document.getElementById('cStockInit').value = stockInitial;
-  document.getElementById('displayStockInit').textContent = stockInitial;
+  document.getElementById('displayStockInit').value = stockInitial;
   document.getElementById('cSaison').value = d.saison || '2025–2026';
   document.getElementById('cEquipe').value = d.equipe || '';
   const saison = d.saison || '2025–2026';
@@ -1005,8 +1027,8 @@ function resetForm() {
   document.getElementById('seanceForm').reset();
   document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
   countAvant = 0; countApres = 0;
-  document.getElementById('displayAvant').textContent = '0';
-  document.getElementById('displayApres').textContent = '0';
+  document.getElementById('displayAvant').value = '0';
+  document.getElementById('displayApres').value = '0';
   document.getElementById('fAvant').value = '0';
   document.getElementById('fApres').value = '0';
   document.getElementById('diffDisplay').className = 'diff-display neutre';
@@ -1210,6 +1232,12 @@ window.addEventListener('DOMContentLoaded', () => {
   buildChips();
   load();
   document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+});
+</script>
+
+</body>
+</html>
+value = new Date().toISOString().split('T')[0];
 });
 </script>
 
