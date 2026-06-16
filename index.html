@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ballons UR">
+<meta name="theme-color" content="#050e1f">
+<title>⚽ Ballons — Union Rochefortoise</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ══════════════════════════════════════
+   VARIABLES & RESET
+══════════════════════════════════════ */
+:root {
+  --bg:        #050e1f;
+  --bg2:       #080f20;
+  --card:      rgba(10, 25, 55, 0.85);
+  --card-bord: rgba(0, 140, 255, 0.18);
+  --bleu:      #0066ff;
+  --bleu-vif:  #00aaff;
+  --eclair:    #00d4ff;
+  --eclair2:   #005fff;
+  --rouge:     #ff3355;
+  --rouge-bg:  rgba(255,51,85,0.12);
+  --vert:      #00e676;
+  --vert-bg:   rgba(0,230,118,0.12);
+  --orange:    #ff8c00;
+  --or:        #ffd700;
+  --texte:     #e8f0ff;
+  --texte-doux:#8ba0c8;
+  --rayon:     14px;
+  --ombre:     0 4px 24px rgba(0,100,255,0.15);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--texte);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: 80px;
+}
+
+/* ── TERRAIN (background) ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(0,102,255,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 40% at 80% 80%, rgba(0,212,255,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 30% at 10% 60%, rgba(0,95,255,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, #050e1f 0%, #020810 100%);
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════
+   HEADER
+══════════════════════════════════════ */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(5,14,31,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--card-bord);
+  padding: 10px 16px 10px;
+  display: flex; align-items: center; gap: 12px;
+}
+.header-logo {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,170,255,0.4);
+  box-shadow: 0 0 12px rgba(0,170,255,0.3);
+  flex-shrink: 0;
+  background: #1a2530;
+  overflow: hidden;
+}
+.header-logo img { width: 100%; height: 100%; object-fit: cover; }
+.header-titles { flex: 1; overflow: hidden; }
+.header-titles .club {
+  font-size: .95rem; font-weight: 800;
+  color: white; letter-spacing: .03em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.header-titles .sous-titre {
+  font-size: .72rem; color: var(--bleu-vif);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-top: 1px;
+}
+.stock-badge {
+  background: linear-gradient(135deg, var(--eclair2), var(--bleu-vif));
+  color: white; border-radius: 20px;
+  padding: 4px 12px;
+  font-size: .85rem; font-weight: 800;
+  box-shadow: 0 0 14px rgba(0,170,255,0.4);
+  white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+}
+.stock-badge.danger { background: linear-gradient(135deg, #c0392b, #e74c3c); box-shadow: 0 0 14px rgba(231,76,60,0.4); }
+.stock-badge.warn   { background: linear-gradient(135deg, #d35400, var(--orange)); }
+
+/* ══════════════════════════════════════
+   NAV BAS
+══════════════════════════════════════ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(5,14,31,0.97);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--card-bord);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 4px 6px;
+  cursor: pointer; border: none; background: none;
+  color: var(--texte-doux); font-size: .65rem; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  gap: 4px; transition: color .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item .icon { font-size: 1.3rem; line-height: 1; }
+.nav-item.active { color: var(--eclair); }
+.nav-item.active .icon { filter: drop-shadow(0 0 6px var(--eclair)); }
+
+/* ══════════════════════════════════════
+   PAGES
+══════════════════════════════════════ */
+.page { display: none; position: relative; z-index: 1; padding: 16px; }
+.page.active { display: block; }
+
+/* ══════════════════════════════════════
+   CARTES STATS
+══════════════════════════════════════ */
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--card-bord);
+  border-radius: var(--rayon);
+  padding: 14px 14px 12px;
+  backdrop-filter: blur(8px);
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--eclair2), var(--eclair));
+}
+.stat-card.danger::before { background: linear-gradient(90deg, #c0392b, var(--rouge)); }
+.stat-card.succes::before { background: linear-gradient(90deg, #00c853, var(--vert)); }
+.stat-val {
+  font-size: 2.1rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, #fff, var(--eclair));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-val.rouge {
+  background: linear-gradient(135deg, var(--rouge), #ff6b86);
+  -webkit-background-clip: text; background-clip: text;
+}
+.stat-val.vert {
+  background: linear-gradient(135deg, var(--vert), #69f0ae);
+  -webkit-background-clip: text; background-clip: text;
+}
+.stat-lbl { font-size: .72rem; color: var(--texte-doux); margin-top: 4px; text-transform: uppercase; letter-spacing: .06em; }
+.stat-icon { position: absolute; right: 12px; top: 12px; font-size: 1.4rem; opacity: .2; }
+
+/* ══════════════════════════════════════
+   SECTION TITLES
+══════════════════════════════════════ */
+.section-title {
+  font-size: .75rem; font-weight: 700;
+  color: var(--bleu-vif); letter-spacing: .1em;
+  text-transform: uppercase; margin: 18px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--card-bord), transparent);
+}
+
+/* ══════════════════════════════════════
+   FORMULAIRE
+══════════════════════════════════════ */
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--card-bord);
+  border-radius: var(--rayon);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 14px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-group.full { grid-column: 1 / -1; margin-bottom: 0; }
+label {
+  font-size: .7rem; font-weight: 700;
+  color: var(--bleu-vif); text-transform: uppercase; letter-spacing: .08em;
+}
+input, select, textarea {
+  background: rgba(0,20,60,0.6);
+  border: 1.5px solid rgba(0,120,255,0.25);
+  border-radius: 9px;
+  color: white;
+  padding: 11px 13px;
+  font-size: .95rem;
+  font-family: inherit;
+  -webkit-appearance: none;
+  transition: border-color .2s, box-shadow .2s;
+  min-height: 44px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--bleu-vif);
+  box-shadow: 0 0 0 3px rgba(0,170,255,0.15);
+  background: rgba(0,30,80,0.7);
+}
+input::placeholder, textarea::placeholder { color: rgba(140,160,200,0.5); }
+select { cursor: pointer; }
+select option { background: #0a1830; }
+textarea { resize: none; min-height: 72px; }
+
+/* compteur ballons */
+.ball-counter {
+  display: flex; align-items: center;
+  background: rgba(0,20,60,0.6);
+  border: 1.5px solid rgba(0,120,255,0.25);
+  border-radius: 9px; overflow: hidden;
+  min-height: 48px;
+}
+.ball-counter button {
+  background: none; border: none;
+  color: var(--bleu-vif); font-size: 1.5rem;
+  width: 48px; min-height: 48px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.ball-counter button:active { background: rgba(0,100,255,0.2); }
+.ball-counter .count-display {
+  flex: 1; text-align: center; font-size: 1.3rem;
+  font-weight: 800; color: white;
+}
+.ball-counter.rouge { border-color: rgba(255,51,85,0.4); }
+.ball-counter.vert  { border-color: rgba(0,230,118,0.4); }
+
+/* diff display */
+.diff-display {
+  padding: 12px 14px; border-radius: 9px;
+  text-align: center; font-size: 1rem; font-weight: 800;
+  border: 1.5px solid transparent; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+}
+.diff-display.perte  { background: var(--rouge-bg); border-color: var(--rouge); color: var(--rouge); }
+.diff-display.ok     { background: var(--vert-bg);  border-color: var(--vert);  color: var(--vert); }
+.diff-display.neutre { background: rgba(0,20,60,0.4); border-color: rgba(0,120,255,0.2); color: var(--texte-doux); }
+
+/* alerte */
+.alerte-perte {
+  display: none;
+  background: rgba(255,51,85,0.1);
+  border: 1px solid rgba(255,51,85,0.35);
+  border-radius: 9px; padding: 10px 13px;
+  font-size: .82rem; color: var(--rouge);
+  font-weight: 600; margin-bottom: 10px;
+  display: none; align-items: center; gap: 7px;
+}
+.alerte-perte.show { display: flex; }
+
+/* ══════════════════════════════════════
+   BOUTONS
+══════════════════════════════════════ */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 13px 20px; border-radius: 11px;
+  font-size: .95rem; font-weight: 700; cursor: pointer; border: none;
+  font-family: inherit; min-height: 48px; letter-spacing: .02em;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .2s, transform .1s, box-shadow .2s;
+  width: 100%;
+}
+.btn:active { opacity: .82; transform: scale(.97); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--eclair2), var(--bleu-vif));
+  color: white;
+  box-shadow: 0 4px 20px rgba(0,100,255,0.4);
+}
+.btn-danger  { background: linear-gradient(135deg, #c0392b, var(--rouge)); color: white; box-shadow: 0 4px 16px rgba(255,51,85,0.3); }
+.btn-ghost   { background: rgba(0,80,200,0.12); border: 1.5px solid var(--card-bord); color: var(--texte); }
+.btn-pdf     { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; box-shadow: 0 4px 16px rgba(21,101,192,0.4); }
+.btn-sm      { min-height: 36px; padding: 6px 14px; font-size: .82rem; width: auto; border-radius: 8px; }
+.btn-row     { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+
+/* ══════════════════════════════════════
+   CARDS SÉANCES (historique)
+══════════════════════════════════════ */
+.seance-card {
+  background: var(--card);
+  border: 1px solid var(--card-bord);
+  border-radius: var(--rayon);
+  padding: 14px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(8px);
+  position: relative; overflow: hidden;
+}
+.seance-card.has-perte { border-color: rgba(255,51,85,0.3); }
+.seance-card.has-perte::after {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--rouge);
+}
+.seance-card.no-perte::after {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--vert);
+}
+.seance-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 8px; gap: 8px;
+}
+.seance-date { font-size: .95rem; font-weight: 700; color: white; }
+.seance-lieu { font-size: .78rem; color: var(--texte-doux); margin-top: 2px; }
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: .7rem; font-weight: 700; white-space: nowrap;
+}
+.badge-match   { background: rgba(63,81,181,0.25); color: #7986cb; border: 1px solid rgba(121,134,203,0.3); }
+.badge-entrain { background: rgba(0,150,136,0.2);  color: #4db6ac; border: 1px solid rgba(77,182,172,0.3); }
+.badge-stage   { background: rgba(255,152,0,0.15);  color: #ffa726; border: 1px solid rgba(255,167,38,0.3); }
+.seance-nums {
+  display: flex; gap: 8px; align-items: center;
+  margin: 8px 0; flex-wrap: wrap;
+}
+.num-pill {
+  display: flex; align-items: center; gap: 5px;
+  font-size: .82rem; font-weight: 600;
+  background: rgba(0,20,60,0.5); border-radius: 8px;
+  padding: 4px 10px;
+}
+.num-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-bleu { background: var(--bleu-vif); }
+.dot-vert { background: var(--vert); }
+.dot-rouge { background: var(--rouge); }
+.dot-or    { background: var(--or); }
+.ecart-badge {
+  padding: 3px 10px; border-radius: 20px; font-weight: 800; font-size: .82rem;
+}
+.ecart-perte { background: var(--rouge-bg); color: var(--rouge); border: 1px solid rgba(255,51,85,0.3); }
+.ecart-ok    { background: var(--vert-bg);  color: var(--vert);  border: 1px solid rgba(0,230,118,0.3); }
+.ecart-gain  { background: rgba(0,170,255,.12); color: var(--bleu-vif); border: 1px solid rgba(0,170,255,.3); }
+.seance-remarque {
+  font-size: .78rem; color: var(--texte-doux); font-style: italic;
+  background: rgba(0,20,60,0.4); border-radius: 7px; padding: 7px 10px;
+  margin-top: 8px; border-left: 2px solid rgba(255,51,85,0.4);
+}
+.seance-stock {
+  font-size: .72rem; color: var(--texte-doux); margin-top: 6px;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-delete-seance {
+  background: none; border: none; color: var(--rouge);
+  font-size: 1.1rem; cursor: pointer; padding: 4px;
+  opacity: .7; -webkit-tap-highlight-color: transparent;
+}
+.btn-delete-seance:active { opacity: 1; }
+
+/* ══════════════════════════════════════
+   PAGE ACCUEIL — QUICK ACTIONS
+══════════════════════════════════════ */
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.quick-btn {
+  background: var(--card);
+  border: 1px solid var(--card-bord);
+  border-radius: var(--rayon);
+  padding: 16px 12px; cursor: pointer;
+  text-align: center; color: white;
+  font-size: .8rem; font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .2s, box-shadow .2s;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+}
+.quick-btn:active { box-shadow: 0 0 0 2px var(--bleu-vif); }
+.quick-btn .qicon { font-size: 1.6rem; }
+
+/* ══════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════ */
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--texte-doux); font-size: .9rem;
+}
+.empty-state .big-icon { font-size: 3rem; margin-bottom: 12px; opacity: .4; }
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,5,20,0.7); backdrop-filter: blur(8px);
+  align-items: flex-end; justify-content: center; padding: 0;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #0a1830;
+  border: 1px solid var(--card-bord);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px;
+  width: 100%; max-width: 500px;
+  animation: slideup .25s ease;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+@keyframes slideup { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal h3 { font-size: 1rem; font-weight: 800; margin-bottom: 8px; color: white; }
+.modal p  { font-size: .85rem; color: var(--texte-doux); margin-bottom: 18px; }
+.modal-btns { display: flex; gap: 10px; }
+.modal-btns .btn { flex: 1; }
+
+/* ══════════════════════════════════════
+   ÉCLAIR DÉCORATIF
+══════════════════════════════════════ */
+.lightning-deco {
+  position: fixed; pointer-events: none; z-index: 0;
+  opacity: .04; font-size: 18rem;
+  right: -2rem; top: 30%;
+  transform: rotate(15deg);
+  user-select: none;
+}
+
+/* ══════════════════════════════════════
+   CONFIG SAISON
+══════════════════════════════════════ */
+.config-section { padding: 16px; }
+.saison-info {
+  background: var(--card); border: 1px solid var(--card-bord);
+  border-radius: var(--rayon); padding: 16px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 14px;
+}
+.saison-logo { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid var(--card-bord); }
+.saison-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ══════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,100,255,0.3); border-radius: 4px; }
+
+/* ══════════════════════════════════════
+   PDF
+══════════════════════════════════════ */
+.pdf-actions {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,25,55,0.97); border: 1px solid var(--bleu-vif);
+  color: white; padding: 10px 20px; border-radius: 24px;
+  font-size: .85rem; font-weight: 600; z-index: 999;
+  box-shadow: 0 4px 20px rgba(0,100,255,0.3);
+  transition: opacity .3s, transform .3s;
+  opacity: 0; pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+</style>
+</head>
+<body>
+
+<!-- DÉCORATION -->
+<div class="lightning-deco">⚡</div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+  <div class="header-logo">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTMwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iYmciIGN4PSI1MCUiIGN5PSI0MCUiIHI9IjYwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM1YTZhN2EiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMWEyNTMwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPGZpbHRlciBpZD0iZ2xvdyI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjIiIHJlc3VsdD0iYmx1ciIvPgogICAgICA8ZmVNZXJnZT48ZmVNZXJnZU5vZGUgaW49ImJsdXIiLz48ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz48L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTgiIGZpbGw9IiMxYTI1MzAiIHN0cm9rZT0iIzRhNWE2YSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI1NCIgZmlsbD0idXJsKCNiZykiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMTUpIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8dGV4dCB4PSI2MCIgeT0iNzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCBzZXJpZiIgZm9udC1zaXplPSI0NiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiBmaWx0ZXI9InVybCgjZ2xvdykiIG9wYWNpdHk9IjAuOTUiPnVyPC90ZXh0PgogIDx0ZXh0IHg9IjYwIiB5PSIxMDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSI5IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSJ3aGl0ZSIgbGV0dGVyLXNwYWNpbmc9IjEiIG9wYWNpdHk9IjAuOSI+VU5JT048L3RleHQ+CiAgPHRleHQgeD0iNjAiIHk9IjEyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC44KSIgbGV0dGVyLXNwYWNpbmc9IjEuNSI+Uk9DSEVGT1JUT0lTRTwvdGV4dD4KPC9zdmc+" alt="UR">
+  </div>
+  <div class="header-titles">
+    <div class="club">Union Rochefortoise</div>
+    <div class="sous-titre" id="headerSaison">Saison 2025–2026</div>
+  </div>
+  <div class="stock-badge" id="headerStock">
+    ⚽ <span id="headerStockVal">—</span>
+  </div>
+</header>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     PAGE : ACCUEIL / DASHBOARD
+══════════════════════════════════════ -->
+<div class="page active" id="page-accueil">
+  <div class="stats-grid" style="margin-top:12px;">
+    <div class="stat-card">
+      <div class="stat-icon">⚽</div>
+      <div class="stat-val" id="statStock">—</div>
+      <div class="stat-lbl">Stock actuel</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-icon">❌</div>
+      <div class="stat-val rouge" id="statPertes">0</div>
+      <div class="stat-lbl">Pertes saison</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-val" id="statSeances">0</div>
+      <div class="stat-lbl">Séances</div>
+    </div>
+    <div class="stat-card succes">
+      <div class="stat-icon">🏁</div>
+      <div class="stat-val vert" id="statInitial">—</div>
+      <div class="stat-lbl">Stock initial</div>
+    </div>
+  </div>
+
+  <div class="section-title">⚡ Actions rapides</div>
+  <div class="quick-actions">
+    <div class="quick-btn" onclick="goToPage('page-saisie')">
+      <div class="qicon">➕</div>
+      Nouvelle séance
+    </div>
+    <div class="quick-btn" onclick="goToPage('page-historique')">
+      <div class="qicon">📋</div>
+      Historique
+    </div>
+    <div class="quick-btn" onclick="exporterPDF()">
+      <div class="qicon">📄</div>
+      Export PDF
+    </div>
+    <div class="quick-btn" onclick="goToPage('page-config')">
+      <div class="qicon">⚙️</div>
+      Paramètres
+    </div>
+  </div>
+
+  <!-- Dernière séance -->
+  <div class="section-title">🕐 Dernière séance</div>
+  <div id="derniereSauce">
+    <div class="empty-state">
+      <div class="big-icon">⚽</div>
+      <p>Aucune séance encore.<br>Appuyez sur <strong>Nouvelle séance</strong> pour démarrer.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE : SAISIE
+══════════════════════════════════════ -->
+<div class="page" id="page-saisie">
+  <div class="section-title" style="margin-top:12px;">📋 Nouvelle séance / match</div>
+
+  <form id="seanceForm" onsubmit="ajouterSeance(event)">
+
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>📅 Date</label>
+          <input type="date" id="fDate" required>
+        </div>
+        <div class="form-group">
+          <label>🏷 Type</label>
+          <select id="fType">
+            <option value="Entraînement">Entraînement</option>
+            <option value="Match">Match</option>
+            <option value="Match amical">Match amical</option>
+            <option value="Stage">Stage</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>📍 Adversaire / Lieu</label>
+          <input type="text" id="fLieu" placeholder="ex : Stade J. Moulin">
+        </div>
+        <div class="form-group">
+          <label>👤 Responsable</label>
+          <input type="text" id="fResponsable" placeholder="Prénom Nom">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label>🔵 Ballons sortis (avant séance)</label>
+        <div class="ball-counter" id="counterAvant">
+          <button type="button" onclick="changeCount('avant',-1)">−</button>
+          <div class="count-display" id="displayAvant">0</div>
+          <button type="button" onclick="changeCount('avant',+1)">+</button>
+        </div>
+        <input type="hidden" id="fAvant" value="0">
+      </div>
+      <div class="form-group">
+        <label>🟢 Ballons rentrés (après séance)</label>
+        <div class="ball-counter" id="counterApres">
+          <button type="button" onclick="changeCount('apres',-1)">−</button>
+          <div class="count-display" id="displayApres">0</div>
+          <button type="button" onclick="changeCount('apres',+1)">+</button>
+        </div>
+        <input type="hidden" id="fApres" value="0">
+      </div>
+      <div class="form-group">
+        <label>⚡ Écart</label>
+        <div class="diff-display neutre" id="diffDisplay">— Saisir les ballons ci-dessus</div>
+      </div>
+    </div>
+
+    <div class="alerte-perte" id="alertePerte">
+      ⚠️ Des ballons manquent — justificatif obligatoire !
+    </div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label>📝 Remarque / Justificatif</label>
+        <textarea id="fRemarque" placeholder="Ex : 2 ballons crevés lors du match, 1 laissé chez l'adversaire, don à l'U13…"></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:10px;">
+      <button type="submit" class="btn btn-primary">✚ Enregistrer</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="resetForm()" style="width:auto;flex:none;padding:0 18px;">↺</button>
+    </div>
+  </form>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE : HISTORIQUE
+══════════════════════════════════════ -->
+<div class="page" id="page-historique">
+  <div style="margin-top:12px;" class="pdf-actions">
+    <button class="btn btn-pdf" onclick="exporterPDF()" style="flex:1;">📄 Exporter PDF</button>
+    <button class="btn btn-ghost btn-sm" onclick="exporterCSV()" style="padding:0 14px;">⬇ CSV</button>
+  </div>
+
+  <!-- Filtres -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <select id="filterType" onchange="renderHistorique()" style="flex:1;font-size:.82rem;padding:8px 10px;min-height:38px;">
+      <option value="">Tous types</option>
+      <option value="Entraînement">Entraînement</option>
+      <option value="Match">Match</option>
+      <option value="Match amical">Match amical</option>
+      <option value="Stage">Stage</option>
+    </select>
+    <select id="filterEcart" onchange="renderHistorique()" style="flex:1;font-size:.82rem;padding:8px 10px;min-height:38px;">
+      <option value="">Tous écarts</option>
+      <option value="perte">Pertes only</option>
+      <option value="ok">Sans perte</option>
+    </select>
+  </div>
+
+  <div id="listeSeances"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE : CONFIG
+══════════════════════════════════════ -->
+<div class="page" id="page-config">
+  <div class="section-title" style="margin-top:12px;">⚙️ Paramètres de saison</div>
+
+  <div class="saison-info">
+    <div class="saison-logo">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTMwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iYmciIGN4PSI1MCUiIGN5PSI0MCUiIHI9IjYwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM1YTZhN2EiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMWEyNTMwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPGZpbHRlciBpZD0iZ2xvdyI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjIiIHJlc3VsdD0iYmx1ciIvPgogICAgICA8ZmVNZXJnZT48ZmVNZXJnZU5vZGUgaW49ImJsdXIiLz48ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz48L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTgiIGZpbGw9IiMxYTI1MzAiIHN0cm9rZT0iIzRhNWE2YSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI1NCIgZmlsbD0idXJsKCNiZykiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSI1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMTUpIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8dGV4dCB4PSI2MCIgeT0iNzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCBzZXJpZiIgZm9udC1zaXplPSI0NiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiBmaWx0ZXI9InVybCgjZ2xvdykiIG9wYWNpdHk9IjAuOTUiPnVyPC90ZXh0PgogIDx0ZXh0IHg9IjYwIiB5PSIxMDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSI5IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSJ3aGl0ZSIgbGV0dGVyLXNwYWNpbmc9IjEiIG9wYWNpdHk9IjAuOSI+VU5JT048L3RleHQ+CiAgPHRleHQgeD0iNjAiIHk9IjEyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC44KSIgbGV0dGVyLXNwYWNpbmc9IjEuNSI+Uk9DSEVGT1JUT0lTRTwvdGV4dD4KPC9zdmc+" alt="UR">
+    </div>
+    <div>
+      <div style="font-weight:800;font-size:1rem;color:white;">Union Rochefortoise</div>
+      <div style="font-size:.8rem;color:var(--texte-doux);margin-top:3px;" id="configSaisonLabel">Saison non configurée</div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-group">
+      <label>🏁 Saison</label>
+      <input type="text" id="cSaison" placeholder="2025–2026" oninput="saveConfig()">
+    </div>
+    <div class="form-group">
+      <label>⚽ Stock initial de ballons</label>
+      <div class="ball-counter">
+        <button type="button" onclick="changeStockInit(-1)">−</button>
+        <div class="count-display" id="displayStockInit">0</div>
+        <button type="button" onclick="changeStockInit(+1)">+</button>
+      </div>
+      <input type="hidden" id="cStockInit" value="0">
+    </div>
+    <div class="form-group">
+      <label>👤 Équipe / Catégorie</label>
+      <input type="text" id="cEquipe" placeholder="ex : Seniors A, U17..." oninput="saveConfig()">
+    </div>
+    <button type="button" class="btn btn-primary" onclick="saveConfig();showToast('✅ Configuration sauvegardée !');">✓ Sauvegarder</button>
+  </div>
+
+  <div class="section-title">⚠️ Zone de danger</div>
+  <div class="form-card">
+    <p style="font-size:.82rem;color:var(--texte-doux);margin-bottom:12px;">Supprimer toutes les séances de la saison. La configuration sera conservée.</p>
+    <button class="btn btn-danger" onclick="confirmerReset()">🗑 Réinitialiser la saison</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL SUPPRESSION ═══════ -->
+<div class="modal-overlay" id="modalSuppr">
+  <div class="modal">
+    <h3>⚠️ Supprimer cette séance ?</h3>
+    <p>Cette action est irréversible. Le stock sera recalculé automatiquement.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="fermerModal()">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmerSuppr()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL RESET ═══════ -->
+<div class="modal-overlay" id="modalReset">
+  <div class="modal">
+    <h3>⚠️ Réinitialiser la saison ?</h3>
+    <p>Toutes les séances seront supprimées. Configuration conservée.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="fermerModal()">Annuler</button>
+      <button class="btn btn-danger" onclick="resetSaison()">Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ NAV BAS ═══════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-accueil" onclick="goToPage('page-accueil')">
+    <span class="icon">🏠</span>Accueil
+  </button>
+  <button class="nav-item" id="nav-saisie" onclick="goToPage('page-saisie')">
+    <span class="icon">➕</span>Séance
+  </button>
+  <button class="nav-item" id="nav-historique" onclick="goToPage('page-historique')">
+    <span class="icon">📋</span>Historique
+  </button>
+  <button class="nav-item" id="nav-config" onclick="goToPage('page-config')">
+    <span class="icon">⚙️</span>Config
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script>
+/* ─── ÉTAT ─── */
+let seances = [];
+let stockInitial = 0;
+let countAvant = 0, countApres = 0;
+let idASupprimer = null;
+const KEY = 'ur_ballons_v3';
+
+/* ─── NAVIGATION ─── */
+function goToPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const navId = 'nav-' + id.replace('page-', '');
+  const navEl = document.getElementById(navId);
+  if (navEl) navEl.classList.add('active');
+  if (id === 'page-historique') renderHistorique();
+  if (id === 'page-accueil') renderDerniere();
+  window.scrollTo(0, 0);
+}
+
+/* ─── TOAST ─── */
+function showToast(msg, dur = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+/* ─── COMPTEURS ─── */
+function changeCount(champ, delta) {
+  if (champ === 'avant') {
+    countAvant = Math.max(0, countAvant + delta);
+    document.getElementById('displayAvant').textContent = countAvant;
+    document.getElementById('fAvant').value = countAvant;
+  } else {
+    countApres = Math.max(0, countApres + delta);
+    document.getElementById('displayApres').textContent = countApres;
+    document.getElementById('fApres').value = countApres;
+  }
+  updateDiff();
+}
+
+function changeStockInit(delta) {
+  stockInitial = Math.max(0, stockInitial + delta);
+  document.getElementById('displayStockInit').textContent = stockInitial;
+  document.getElementById('cStockInit').value = stockInitial;
+}
+
+function updateDiff() {
+  const av = countAvant, ap = countApres;
+  const diff = av - ap;
+  const el = document.getElementById('diffDisplay');
+  const alerte = document.getElementById('alertePerte');
+  if (av === 0 && ap === 0) {
+    el.className = 'diff-display neutre';
+    el.textContent = '— Saisir les ballons ci-dessus';
+    alerte.classList.remove('show'); return;
+  }
+  if (diff > 0) {
+    el.className = 'diff-display perte';
+    el.textContent = '⚠️  −' + diff + ' ballon' + (diff > 1 ? 's' : '') + ' manquant' + (diff > 1 ? 's' : '');
+    alerte.classList.add('show');
+    document.getElementById('counterApres').className = 'ball-counter rouge';
+  } else if (diff < 0) {
+    el.className = 'diff-display ok';
+    el.textContent = '✅  +' + Math.abs(diff) + ' ballon' + (Math.abs(diff) > 1 ? 's' : '') + ' en plus';
+    alerte.classList.remove('show');
+    document.getElementById('counterApres').className = 'ball-counter vert';
+  } else {
+    el.className = 'diff-display ok';
+    el.textContent = '✅  Aucune perte — 0 écart';
+    alerte.classList.remove('show');
+    document.getElementById('counterApres').className = 'ball-counter vert';
+  }
+}
+
+/* ─── SAUVEGARDE ─── */
+function save() {
+  localStorage.setItem(KEY, JSON.stringify({
+    seances, stockInitial,
+    saison: document.getElementById('cSaison').value || '2025–2026',
+    equipe: document.getElementById('cEquipe').value || '',
+  }));
+  refreshStats();
+}
+
+function saveConfig() {
+  stockInitial = parseInt(document.getElementById('cStockInit').value) || 0;
+  const saison = document.getElementById('cSaison').value || '2025–2026';
+  document.getElementById('headerSaison').textContent = 'Saison ' + saison;
+  document.getElementById('configSaisonLabel').textContent = 'Saison ' + saison;
+  save();
+}
+
+function load() {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) { refreshStats(); return; }
+  const d = JSON.parse(raw);
+  seances = d.seances || [];
+  stockInitial = d.stockInitial || 0;
+  document.getElementById('cStockInit').value = stockInitial;
+  document.getElementById('displayStockInit').textContent = stockInitial;
+  document.getElementById('cSaison').value = d.saison || '2025–2026';
+  document.getElementById('cEquipe').value = d.equipe || '';
+  const saison = d.saison || '2025–2026';
+  document.getElementById('headerSaison').textContent = 'Saison ' + saison;
+  document.getElementById('configSaisonLabel').textContent = 'Saison ' + saison;
+  refreshStats();
+  renderDerniere();
+}
+
+/* ─── STATS ─── */
+function getStockActuel() {
+  return stockInitial - seances.reduce((a, s) => a + s.ecart, 0);
+}
+
+function refreshStats() {
+  const stock = getStockActuel();
+  const pertes = seances.reduce((a, s) => a + Math.max(0, s.ecart), 0);
+  document.getElementById('statStock').textContent = stock;
+  document.getElementById('statPertes').textContent = pertes;
+  document.getElementById('statSeances').textContent = seances.length;
+  document.getElementById('statInitial').textContent = stockInitial;
+  document.getElementById('headerStockVal').textContent = stock;
+  const badge = document.getElementById('headerStock');
+  badge.className = 'stock-badge' + (stock < 5 ? ' danger' : stock < 10 ? ' warn' : '');
+}
+
+/* ─── AJOUTER SÉANCE ─── */
+function ajouterSeance(e) {
+  e.preventDefault();
+  const av = countAvant, ap = countApres;
+  const ecart = av - ap;
+  const remarque = document.getElementById('fRemarque').value.trim();
+  if (ecart > 0 && !remarque) {
+    showToast('⚠️ Justificatif obligatoire pour les pertes !');
+    document.getElementById('fRemarque').focus();
+    return;
+  }
+  const seance = {
+    id: Date.now(),
+    date: document.getElementById('fDate').value,
+    type: document.getElementById('fType').value,
+    lieu: document.getElementById('fLieu').value.trim(),
+    responsable: document.getElementById('fResponsable').value.trim(),
+    avant: av, apres: ap, ecart, remarque,
+  };
+  seances.push(seance);
+  seances.sort((a,b) => new Date(a.date) - new Date(b.date));
+  save();
+  resetForm();
+  showToast('✅ Séance enregistrée !');
+  goToPage('page-accueil');
+}
+
+/* ─── RESET FORM ─── */
+function resetForm() {
+  document.getElementById('seanceForm').reset();
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  countAvant = 0; countApres = 0;
+  document.getElementById('displayAvant').textContent = '0';
+  document.getElementById('displayApres').textContent = '0';
+  document.getElementById('fAvant').value = '0';
+  document.getElementById('fApres').value = '0';
+  document.getElementById('diffDisplay').className = 'diff-display neutre';
+  document.getElementById('diffDisplay').textContent = '— Saisir les ballons ci-dessus';
+  document.getElementById('alertePerte').classList.remove('show');
+  document.getElementById('counterApres').className = 'ball-counter';
+}
+
+/* ─── RENDER DERNIÈRE SÉANCE ─── */
+function renderDerniere() {
+  const el = document.getElementById('derniereSauce');
+  if (!seances.length) {
+    el.innerHTML = `<div class="empty-state"><div class="big-icon">⚽</div><p>Aucune séance encore.<br>Appuyez sur <strong>Nouvelle séance</strong> pour démarrer.</p></div>`;
+    return;
+  }
+  const s = seances[seances.length - 1];
+  el.innerHTML = buildSeanceCard(s, getStockProgMap()[s.id]);
+}
+
+/* ─── STOCK PROGRESSIF ─── */
+function getStockProgMap() {
+  let stock = stockInitial;
+  const map = {};
+  seances.forEach(s => { stock -= s.ecart; map[s.id] = stock; });
+  return map;
+}
+
+/* ─── BUILD CARD ─── */
+function buildSeanceCard(s, stockApres) {
+  const dateF = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long' });
+  const typeBadge = (s.type === 'Match' || s.type === 'Match amical') ? 'badge-match' : s.type === 'Stage' ? 'badge-stage' : 'badge-entrain';
+  const ecartHtml = s.ecart > 0
+    ? `<span class="ecart-badge ecart-perte">−${s.ecart} ⚠️</span>`
+    : s.ecart < 0
+      ? `<span class="ecart-badge ecart-gain">+${Math.abs(s.ecart)} ✅</span>`
+      : `<span class="ecart-badge ecart-ok">=0 ✅</span>`;
+  const cardClass = s.ecart > 0 ? 'has-perte' : 'no-perte';
+  return `
+    <div class="seance-card ${cardClass}">
+      <div class="seance-header">
+        <div>
+          <div class="seance-date">${dateF}</div>
+          <div class="seance-lieu">${s.lieu || (s.responsable ? '👤 '+s.responsable : '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="badge ${typeBadge}">${s.type}</span>
+          <button class="btn-delete-seance" onclick="demanderSuppr(${s.id})">🗑</button>
+        </div>
+      </div>
+      <div class="seance-nums">
+        <div class="num-pill"><div class="dot dot-bleu"></div>${s.avant} sorti${s.avant>1?'s':''}</div>
+        <div class="num-pill"><div class="dot dot-vert"></div>${s.apres} rentré${s.apres>1?'s':''}</div>
+        ${ecartHtml}
+      </div>
+      ${s.responsable && s.lieu ? `<div style="font-size:.75rem;color:var(--texte-doux);margin-bottom:4px;">👤 ${s.responsable}</div>` : ''}
+      ${stockApres !== undefined ? `<div class="seance-stock">⚽ Stock après séance : <strong style="color:white;margin-left:4px;">${stockApres}</strong></div>` : ''}
+      ${s.remarque ? `<div class="seance-remarque">💬 ${s.remarque}</div>` : ''}
+    </div>`;
+}
+
+/* ─── RENDER HISTORIQUE ─── */
+function renderHistorique() {
+  const filterType = document.getElementById('filterType').value;
+  const filterEcart = document.getElementById('filterEcart').value;
+  const stockMap = getStockProgMap();
+  let rows = [...seances].reverse().filter(s => {
+    const ok1 = !filterType || s.type === filterType;
+    const ok2 = !filterEcart || (filterEcart === 'perte' && s.ecart > 0) || (filterEcart === 'ok' && s.ecart <= 0);
+    return ok1 && ok2;
+  });
+  const el = document.getElementById('listeSeances');
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-state"><div class="big-icon">📋</div><p>Aucune séance pour ces filtres.</p></div>`;
+    return;
+  }
+  el.innerHTML = rows.map(s => buildSeanceCard(s, stockMap[s.id])).join('');
+}
+
+/* ─── SUPPRESSION ─── */
+function demanderSuppr(id) {
+  idASupprimer = id;
+  document.getElementById('modalSuppr').classList.add('open');
+}
+function confirmerSuppr() {
+  seances = seances.filter(s => s.id !== idASupprimer);
+  idASupprimer = null;
+  save();
+  renderHistorique();
+  renderDerniere();
+  fermerModal();
+  showToast('🗑 Séance supprimée');
+}
+function confirmerReset() { document.getElementById('modalReset').classList.add('open'); }
+function resetSaison() {
+  seances = [];
+  save();
+  renderHistorique();
+  renderDerniere();
+  fermerModal();
+  showToast('♻️ Saison réinitialisée');
+}
+function fermerModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); }
+
+/* ─── EXPORT CSV ─── */
+function exporterCSV() {
+  const stockMap = getStockProgMap();
+  const h = ['#','Date','Type','Lieu','Responsable','Sortis','Rentrés','Écart','Stock après','Remarque'];
+  const rows = seances.map((s,i) => [i+1,s.date,s.type,s.lieu,s.responsable,s.avant,s.apres,s.ecart,stockMap[s.id],s.remarque]);
+  const csv = [h,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'UR_Ballons_Saison.csv'; a.click();
+  showToast('⬇ CSV téléchargé !');
+}
+
+/* ─── EXPORT PDF ─── */
+function exporterPDF() {
+  if (typeof window.jspdf === 'undefined') {
+    showToast('⏳ Chargement PDF en cours…');
+    setTimeout(exporterPDF, 1500); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const saison = document.getElementById('cSaison').value || '2025–2026';
+  const equipe = document.getElementById('cEquipe').value || '';
+  const today  = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const stock  = getStockActuel();
+  const pertes = seances.reduce((a,s) => a + Math.max(0,s.ecart), 0);
+
+  // Header bleu
+  doc.setFillColor(5, 30, 80);
+  doc.rect(0, 0, 297, 24, 'F');
+  doc.setFillColor(0, 100, 220);
+  doc.rect(0, 22, 297, 2, 'F');
+
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('UNION ROCHEFORTOISE — GESTION DES BALLONS', 14, 10);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Saison ${saison}${equipe ? '  ·  ' + equipe : ''}  ·  Édité le ${today}`, 14, 17);
+  doc.text(`Stock initial : ${stockInitial}  |  Stock actuel : ${stock}  |  Pertes saison : ${pertes}  |  Séances : ${seances.length}`, 297-14, 17, {align:'right'});
+
+  const stockMap = getStockProgMap();
+  const data = seances.map((s,i) => {
+    const ecart = s.ecart > 0 ? `−${s.ecart}` : s.ecart < 0 ? `+${Math.abs(s.ecart)}` : '=0';
+    const dateF = new Date(s.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    return [i+1, dateF, s.type, s.lieu||'', s.responsable||'', s.avant, s.apres, ecart, stockMap[s.id]||'', s.remarque||''];
+  });
+
+  doc.autoTable({
+    startY: 28,
+    head: [['#','Date','Type','Lieu / Adversaire','Responsable','Sortis','Rentrés','Écart','Stock','Remarque / Justificatif']],
+    body: data,
+    styles: { fontSize: 8, cellPadding: 2.5, font:'helvetica' },
+    headStyles: { fillColor:[5,50,150], textColor:255, fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[240,245,255] },
+    columnStyles: {
+      0: { halign:'center', cellWidth:8 },
+      1: { cellWidth:18 },
+      2: { cellWidth:22 },
+      5: { halign:'center', cellWidth:13 },
+      6: { halign:'center', cellWidth:13 },
+      7: { halign:'center', cellWidth:13, fontStyle:'bold' },
+      8: { halign:'center', cellWidth:13 },
+      9: { fontStyle:'italic', textColor:[80,100,140] },
+    },
+    didParseCell: d => {
+      if (d.column.index === 7 && d.section === 'body') {
+        const v = d.cell.text[0];
+        if (v && v.startsWith('−')) d.cell.styles.textColor = [192,57,43];
+        else if (v && v.startsWith('+')) d.cell.styles.textColor = [0,150,80];
+      }
+    },
+    margin: { left:14, right:14 },
+  });
+
+  const pages = doc.getNumberOfPages();
+  for (let p=1; p<=pages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(150,160,180);
+    doc.text(`Page ${p}/${pages} — Union Rochefortoise · Saison ${saison}`, 14, 205);
+  }
+  doc.save(`UR_Ballons_Saison_${saison.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`);
+  showToast('📄 PDF exporté !');
+}
+
+/* ─── INIT ─── */
+window.addEventListener('DOMContentLoaded', () => {
+  load();
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+});
+</script>
+
+</body>
+</html>
